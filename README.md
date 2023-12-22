@@ -1,10 +1,10 @@
 # NATS Bench
 
-A performance benchmark for the NATS server.
+A performance benchmark for the [NATS server](https://github.com/nats-io/nats-server).
 
 ## Motivation
 
-This benchmark focuses on the performance of JetStream consumers with multiple filter subjects. It does so because we have found that this use case performs worse than expected. This benchmark provides the means to reproduce this finding easily. It also captures a profile of the NATS server in order to identify code paths that could potentially be optimized.
+This benchmark focuses on the performance of [JetStream](https://docs.nats.io/nats-concepts/jetstream) consumers with multiple filter subjects. It does so because we have found that this use case performs worse than expected. This benchmark provides the means to reproduce this finding easily. It also captures a profile of the NATS server in order to identify code paths that could potentially be optimized.
 
 ### Stream Setup
 
@@ -48,7 +48,7 @@ Set the NATS image to test in the `.env` file:
 NATS_IMAGE=nats:2.10-alpine
 ```
 
-or use the nightly image:
+Or use the nightly image:
 
 ```shell
 NATS_IMAGE=synadia/nats-server:nightly
@@ -80,11 +80,8 @@ NUM_CONSUMERS=100 docker-compose up
 
 ## Profiling
 
-The `pprof` container obtains a profile from the NATS server under test.
-If your benchmark runs longer than 30 seconds, or if you wait long enough
-at the end of the benchmark, a `nats.profile` will appear in the `profiles`
-folder. This file can be used with the [pprof](https://pkg.go.dev/net/http/pprof)
-tool:
+The `pprof` container obtains a profile from the NATS server under test. If your benchmark runs longer than 30 seconds, or if you wait long enough at the end of the benchmark, a `nats.profile` will appear in the `profiles`
+folder. This file can be used with the [pprof](https://pkg.go.dev/net/http/pprof) tool:
 
 ```shell
 go tool pprof profiles/nats.profile
@@ -97,7 +94,7 @@ The use of `docker-compose` guarantees that the NATS server is freshly started f
 Start a NATS server and keep it running:
 
 ```shell
-docker run -p 4222 nats:2.10-alpine nats-server --jetstream
+docker run -p 4222:4222 nats:2.10-alpine nats-server --jetstream
 ```
 
 Compile the client locally:
