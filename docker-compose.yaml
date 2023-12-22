@@ -1,0 +1,32 @@
+version: "3.7"
+
+services:
+  nats:
+    image: ${DOCKER_HUB}${NATS_IMAGE}
+    entrypoint: nats-server
+    command: --jetstream --profile 6060
+  client:
+    build:
+      context: .
+      network: host
+      dockerfile: Dockerfile
+      args:
+        - DOCKER_HUB=${DOCKER_HUB}
+    environment:
+      - NATS_URL=nats:4222
+    command:
+       - /opt/nats-bench
+       - -num-realms=${NUM_REALMS}
+       - -num-consumers=${NUM_CONSUMERS}
+       - -num-realms-per-consumer=${NUM_REALMS_PER_CONSUMER}
+    depends_on:
+      - nats
+  pprof:
+    image: ${DOCKER_HUB}alpine:3.18
+    volumes:
+      - type: bind
+        source: ./profiles
+        target: /tmp/profiles
+    command: wget http://nats:6060/debug/pprof/profile -O /tmp/profiles/nats.profile
+    depends_on:
+      - nats
