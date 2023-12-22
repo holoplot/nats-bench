@@ -28,12 +28,13 @@ func New(config Config) *Client {
 	return &Client{
 		config: config,
 	}
-
 }
 
 func (c *Client) Run(ctx context.Context) Result {
-	realms := make([]string, c.config.NumRealms)
-	for i := 0; i < c.config.NumRealms; i++ {
+	runConfig := c.config.runConfig()
+
+	realms := make([]string, runConfig.NumRealms)
+	for i := 0; i < runConfig.NumRealms; i++ {
 		realms[i] = uuid.New().String()
 	}
 
@@ -50,30 +51,13 @@ func (c *Client) Run(ctx context.Context) Result {
 
 		js.DeleteStream(ctx, streamName)
 
-		streamConfig := jetstream.StreamConfig{
-			Name:              streamName,
-			Description:       streamDescription,
-			Subjects:          []string{"config.>"},
-			Storage:           jetstream.FileStorage,
-			Retention:         jetstream.LimitsPolicy,
-			MaxAge:            time.Hour,
-			Duplicates:        10 * time.Second,
-			Discard:           jetstream.DiscardOld,
-			NoAck:             false,
-			MaxMsgs:           -1,
-			MaxBytes:          -1,
-			MaxConsumers:      -1,
-			Replicas:          1,
-			MaxMsgsPerSubject: 1,
-		}
-
-		if _, err := js.CreateStream(ctx, streamConfig); err != nil {
+		if _, err := js.CreateStream(ctx, streamConfig()); err != nil {
 			panic(err)
 		}
 
 		n := 0
 		for _, realm := range realms {
-			for _, suffix := range c.config.Suffixes {
+			for _, suffix := range runConfig.Suffixes {
 				subject := strings.Join([]string{"config", realm, suffix}, ".")
 				s := uuid.New()
 
@@ -92,27 +76,29 @@ func (c *Client) Run(ctx context.Context) Result {
 		preparedWg.Done()
 	}
 
-	fmt.Printf("Connecting to NATS (%s)\n", c.config.NatsURL)
-	if err := utils.NatsConnect(ctx, c.config.NatsURL, "client", onConnected); err != nil {
+	fmt.Printf("Connecting to NATS (%s)\n", runConfig.NatsURL)
+	if err := utils.NatsConnect(ctx, runConfig.NatsURL, "client", onConnected); err != nil {
 		panic(err)
 	}
 
 	preparedWg.Wait()
 
-	consumers := make([]*consumer.Consumer, c.config.NumConsumers)
+	fmt.Printf("Testing approach %s\n", runConfig.Approach)
+
+	consumers := make([]*consumer.Consumer, runConfig.NumConsumers)
 	n := 0
 
-	for i := 0; i < c.config.NumConsumers; i++ {
+	for i := 0; i < runConfig.NumConsumers; i++ {
 		consumerConfig := consumer.Config{
-			NatsURL:  c.config.NatsURL,
-			Suffixes: c.config.Suffixes,
+			NatsURL:  runConfig.NatsURL,
+			Suffixes: runConfig.Suffixes,
 			Stream:   streamName,
 			ClientID: fmt.Sprintf("consumer-%d", i),
+			Approach: runConfig.Approach,
 		}
 
-		consumerRealms := make(map[string]struct{}, 0)
-
-		for j := 0; j < c.config.NumRealmsPerConsumer; j++ {
+		consumerRealms := make(map[string]struct{}, runConfig.NumRealmsPerConsumer)
+		for j := 0; j < runConfig.NumRealmsPerConsumer; j++ {
 			consumerRealms[realms[rand.Intn(len(realms))]] = struct{}{}
 		}
 
@@ -120,14 +106,15 @@ func (c *Client) Run(ctx context.Context) Result {
 			consumerConfig.Realms = append(consumerConfig.Realms, realm)
 		}
 
-		consumers[i] = consumer.New(consumerConfig)
+		consumers[i] = consumer.New(consumerConfig, runConfig.NumRealms)
 		n += consumers[i].NumMessages()
 	}
 
 	consumerWg := sync.WaitGroup{}
 	consumerWg.Add(len(consumers))
 
-	fmt.Printf("Starting %d consumers for a total of %d messages\n", len(consumers), n)
+	fmt.Printf("Creating %d consumers for a total of %d messages\n", len(consumers), n)
+
 	start := time.Now()
 
 	for _, c := range consumers {
@@ -145,5 +132,24 @@ func (c *Client) Run(ctx context.Context) Result {
 	return Result{
 		ConsumedMessages: n,
 		Elapsed:          time.Since(start),
+	}
+}
+
+func streamConfig() jetstream.StreamConfig {
+	return jetstream.StreamConfig{
+		Name:              streamName,
+		Description:       streamDescription,
+		Subjects:          []string{"config.>"},
+		Storage:           jetstream.FileStorage,
+		Retention:         jetstream.LimitsPolicy,
+		MaxAge:            time.Hour,
+		Duplicates:        10 * time.Second,
+		Discard:           jetstream.DiscardOld,
+		NoAck:             false,
+		MaxMsgs:           -1,
+		MaxBytes:          -1,
+		MaxConsumers:      -1,
+		Replicas:          1,
+		MaxMsgsPerSubject: 1,
 	}
 }
