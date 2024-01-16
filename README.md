@@ -78,6 +78,29 @@ or as environment variables passed to `docker-compose`:
 NUM_CONSUMERS=100 docker-compose up
 ```
 
+### Approaches
+
+#### Multiple filter subjects
+
+This benchmark defaults to the approach where each client creates one consumer that has multiple filter subjects. This minimizes the number of consumers and it minimizes network traffic. Each client only receives the data it needs, the filtering is done on the NATS server.
+
+#### Many consumers
+
+An alternative approach is to let each client install many consumers, each with only a single filter subject. This also results in each client only receiving the data it needs, again the filtering is done on the NATS server. However the number of consumers is much larger. You can also benchmark this approach:
+
+```shell
+APPROACH=many-consumers docker-compose up
+```
+
+#### Wildcard subscription
+
+Another alternative is to let each client install a single consumer using a wildcard subscription that matches all messages. Each client will receive all the data, also the data it doesn't actually need. This results in much higher network traffic, the filtering then needs to be done on the client side. You can also benchmark this approach:
+
+```shell
+APPROACH=wildcard docker-compose up
+```
+
+
 ## Profiling
 
 The `pprof` container obtains a profile from the NATS server under test. If your benchmark runs longer than 30 seconds, or if you wait long enough at the end of the benchmark, a `nats.profile` will appear in the `profiles`

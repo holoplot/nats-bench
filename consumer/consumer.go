@@ -2,7 +2,6 @@ package consumer
 
 import (
 	"context"
-	"strings"
 	"sync"
 
 	"github.com/holoplot/nats-bench/utils"
@@ -10,26 +9,29 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
-type Config struct {
-	NatsURL  string
-	Stream   string
-	ClientID string
-	Realms   []string
-	Suffixes []string
-}
-
 type Consumer struct {
-	config Config
+	config      Config
+	numMessages int
 }
 
-func New(config Config) *Consumer {
+func New(config Config, totalRealms int) *Consumer {
+	n := 0
+
+	switch config.Approach {
+	case MultipleFilterSubjects, ManyConsumers:
+		n = len(config.Realms)
+	case Wildcard:
+		n = totalRealms
+	}
+
 	return &Consumer{
-		config: config,
+		config:      config,
+		numMessages: n * len(config.Suffixes),
 	}
 }
 
 func (c *Consumer) NumMessages() int {
-	return len(c.config.Realms) * len(c.config.Suffixes)
+	return c.numMessages
 }
 
 func (c *Consumer) Run(ctx context.Context) error {
@@ -42,16 +44,7 @@ func (c *Consumer) Run(ctx context.Context) error {
 			panic(err)
 		}
 
-		config := jetstream.OrderedConsumerConfig{
-			DeliverPolicy: jetstream.DeliverLastPerSubjectPolicy,
-		}
-
-		for _, realm := range c.config.Realms {
-			subject := strings.Join([]string{"config", realm, ">"}, ".")
-			config.FilterSubjects = append(config.FilterSubjects, subject)
-		}
-
-		cons, err := js.OrderedConsumer(ctx, c.config.Stream, config)
+		cons, err := js.OrderedConsumer(ctx, c.config.Stream, c.config.consumerConfig())
 		if err != nil {
 			panic(err)
 		}
