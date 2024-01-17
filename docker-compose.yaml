@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   nats:
-    image: ${DOCKER_HUB}${NATS_IMAGE}
+    image: ${DOCKER_HUB}${NATS_IMAGE:-nats:2.10}
     entrypoint: nats-server
     command: --jetstream --profile 6060
   client:
@@ -17,9 +17,9 @@ services:
     command:
        - /opt/nats-bench
        - -approach=${APPROACH:-multiple-filter-subjects}
-       - -num-realms=${NUM_REALMS}
-       - -num-consumers=${NUM_CONSUMERS}
-       - -num-realms-per-consumer=${NUM_REALMS_PER_CONSUMER}
+       - -num-realms=${NUM_REALMS:-10000}
+       - -num-consumers=${NUM_CONSUMERS:-20}
+       - -num-realms-per-consumer=${NUM_REALMS_PER_CONSUMER:-50}
     depends_on:
       - nats
   pprof:
