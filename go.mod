@@ -3,7 +3,7 @@ module github.com/holoplot/nats-bench
 go 1.21
 
 require (
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 	github.com/nats-io/nats.go v1.32.0
 )
 
