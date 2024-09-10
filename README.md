@@ -37,7 +37,7 @@ A configurable number of consumers fetches configuration messages. Each consumer
 Build the benchmark client
 
 ```shell
-docker-compose build
+docker compose build
 ```
 
 ## Executing the benchmark
@@ -57,10 +57,10 @@ NATS_IMAGE=synadia/nats-server:nightly
 Run the benchmark with default parameters:
 
 ```shell
-docker-compose up
+docker compose up
 ```
 
-Press Ctrl-C, or run `docker-compose down`, when done.
+Press Ctrl-C, or run `docker compose down`, when done.
 
 ### Parameters
 
