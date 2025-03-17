@@ -1,5 +1,3 @@
-version: "3.7"
-
 services:
   nats:
     image: ${DOCKER_HUB}${NATS_IMAGE:-nats:2.10}

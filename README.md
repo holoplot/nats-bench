@@ -75,7 +75,7 @@ NUM_REALMS_PER_CONSUMER=50
 or as environment variables passed to `docker-compose`:
 
 ```shell
-NUM_CONSUMERS=100 docker-compose up
+NUM_CONSUMERS=100 docker compose up
 ```
 
 ### Approaches
